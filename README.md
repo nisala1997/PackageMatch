@@ -1,6 +1,8 @@
-# vinext-starter
+# PackageMatch
 
-A clean full-stack starter running on [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and Drizzle support.
+A postpaid package comparison portal with Data+Voice, Data Only and add-on recommendations, a public customer interface, and password-protected package administration. Built with React, Vinext and Cloudflare D1.
+
+See [START_HERE.md](START_HERE.md) for setup, admin credentials and catalogue details.
 
 ## Prerequisites
 

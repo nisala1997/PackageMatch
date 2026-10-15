@@ -1,0 +1,11 @@
+import {ensureCatalogue} from '../../../db/catalogue';
+import {database} from '../../../db';
+import {packageSchema,clearOldUpaharaCondition} from '../../../lib/catalog';
+import {canManagePackages} from '../../package-access';
+import {sameOrigin} from '../../../lib/staff-security';
+export const dynamic='force-dynamic';
+function failure(e:unknown){console.error(e);return Response.json({error:'Could not access the catalogue. Your changes were not saved. Please try again.'},{status:503});}
+export async function GET(){try{await ensureCatalogue();const rows=await database().prepare('SELECT payload FROM packages').all<{payload:string}>();return Response.json({packages:rows.results.map(r=>({category:'base',billingCycle:'renewing',validityDays:null,unlimitedData:false,governmentOnly:false,connectionFee:null,nightData:0,specialBenefits:'',restrictions:'',...JSON.parse(r.payload)})).map(clearOldUpaharaCondition)},{headers:{'Cache-Control':'no-store'}});}catch(e){return failure(e);}}
+async function permitted(request:Request){return sameOrigin(request)&&await canManagePackages();}
+export async function POST(request:Request){if(!await permitted(request))return Response.json({error:'Staff login is required to manage packages.'},{status:403});try{await ensureCatalogue();const body=await request.json() as Record<string,unknown>;if(body.id==null||body.id==='')body.id=crypto.randomUUID();const parsed=packageSchema.safeParse(body);if(!parsed.success)return Response.json({error:parsed.error.issues[0].message},{status:400});const p=parsed.data;await database().prepare('INSERT INTO packages (id,payload) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').bind(p.id,JSON.stringify(p)).run();return Response.json({ok:true});}catch(e){return failure(e);}}
+export async function DELETE(request:Request){if(!await permitted(request))return Response.json({error:'Staff login is required to manage packages.'},{status:403});try{await ensureCatalogue();const {id}=await request.json() as {id?:unknown};if(typeof id!=='string')return Response.json({error:'Invalid package selection'},{status:400});await database().prepare('DELETE FROM packages WHERE id=?').bind(id).run();return Response.json({ok:true});}catch(e){return failure(e);}}
